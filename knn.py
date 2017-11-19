@@ -1,51 +1,82 @@
 import numpy as np
+import os
 from numpy.linalg import det, inv
 
+# user-defined constants
 DIM = 20
 K_VALUE = 5
-DEV_SET = 150
-TEST_SET = 150
-TRAIN_SET = 700
+FEATURE_DIM = 15
 
-def splitData():
-	# mean = np.loadtxt('mean_15.csv', delimiter = ',')
+DATASET_SIZE = 1000
+TRACK_COUNT_PER_GENRE = 100
+TRAINSET_PERCENT = 0.7
+DEVSET_PERCENT = 0.15
+TESTSET_PERCENT = 0.15
+
+DEV_SET = DEVSET_PERCENT * DATASET_SIZE
+TEST_SET = TESTSET_PERCENT * DATASET_SIZE
+TRAIN_SET = TRAINSET_PERCENT * DATASET_SIZE
+
+FILEPATH_DATA = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\data'
+
+FILEPATH_MEAN = os.path.join(FILEPATH_DATA,'mean_{}.csv'.format(FEATURE_DIM))
+FILEPATH_COV = os.path.join(FILEPATH_DATA, 'cov_{}.csv'.format(FEATURE_DIM))
+FILEPATH_LABELS = os.path.join(FILEPATH_DATA, 'labels.csv')
+
+FILEPATH_MEAN_TRAIN = os.path.join(FILEPATH_DATA, 'meanTrain_{}.csv'.format(FEATURE_DIM))
+FILEPATH_COV_TRAIN = os.path.join(FILEPATH_DATA, 'covTrain_{}.csv'.format(FEATURE_DIM))
+FILEPATH_MEAN_TEST = os.path.join(FILEPATH_DATA, 'meanTest_{}.csv'.format(FEATURE_DIM))
+FILEPATH_COV_TEST = os.path.join(FILEPATH_DATA, 'covTest_{}.csv'.format(FEATURE_DIM))
+FILEPATH_LABELS_TRAIN = os.path.join(FILEPATH_DATA, 'labelsTrain.csv')
+FILEPATH_LABELS_TEST = os.path.join(FILEPATH_DATA, 'labelsTest.csv')
+
+
+# Splits data into training set, dev set and test set.
+# Param <genres>: Array specifying the genres to consider
+def splitData(genres):
+	# Read all data from file
+	mean = np.loadtxt(FILEPATH_MEAN, delimiter = ',')
+	cov = np.loadtxt(FILEPATH_COV, delimiter = ',')
+	cov = cov.reshape(DATASET_SIZE, FEATURE_DIM, FEATURE_DIM)
+	labels = np.loadtxt(FILEPATH_LABELS)
+
+	# Extract records relevant to genres specified in the parameter <genres>
+	indices = []
+	for x in genres:
+		idx = range(x * TRACK_COUNT_PER_GENRE, x * TRACK_COUNT_PER_GENRE + TRACK_COUNT_PER_GENRE)
+		indices = np.append(indices, idx)
+	indices = np.array(indices, dtype = np.int)	
+	mean = mean[indices]
+	cov = cov[indices]
 	
 	idxTrain = []
 	idxTest = []
 	a = []
-	b = []
+	b = []	
 
-	for x in xrange(0,10):
-		a = range(x * 100, x * 100 + 70)
+	# Extract train and test records and save as CSV
+	for x, g in enumerate(genres):
+		a = range(x * TRACK_COUNT_PER_GENRE, x * TRACK_COUNT_PER_GENRE + int(TRAINSET_PERCENT * TRACK_COUNT_PER_GENRE))
 		idxTrain = np.append(idxTrain,a)
-		b = range(x * 100 + 70, (x+1)*100)
+		b = range(x * TRACK_COUNT_PER_GENRE + int(TRAINSET_PERCENT * TRACK_COUNT_PER_GENRE), (x+1) * TRACK_COUNT_PER_GENRE)
 		idxTest = np.append(idxTest,b)
 
 	idxTrain = np.array(idxTrain, dtype = np.int)
 	idxTest = np.array(idxTest, dtype = np.int)
 
-	np.savetxt('meanTrain_15.csv',mean[idxTrain],delimiter=',',newline='\n')
-	np.savetxt('meanTest_15.csv',mean[idxTest],delimiter=',',newline='\n')
+	trainCov = cov[idxTrain].reshape(idxTrain.shape[0] * FEATURE_DIM, FEATURE_DIM)
+	testCov = cov[idxTest].reshape(idxTest.shape[0] * FEATURE_DIM, FEATURE_DIM)
 
-	cov = np.loadtxt('cov_15.csv', delimiter = ',')
-	cov = cov.reshape(1000,15,15)
 
-	for x in xrange(0,10):
-		a = range(x * 100, x * 100 + 70)
-		idxTrain = np.append(idxTrain,a)
-		b = range(x * 100 + 70, (x+1)*100)
-		idxTest = np.append(idxTest,b)
+	np.savetxt(FILEPATH_MEAN_TRAIN,mean[idxTrain],delimiter=',',newline='\n')
+	np.savetxt(FILEPATH_MEAN_TEST,mean[idxTest],delimiter=',',newline='\n')
+	
+	np.savetxt(FILEPATH_COV_TRAIN, trainCov, delimiter=',', newline='\n')
+	np.savetxt(FILEPATH_COV_TEST, testCov, delimiter=',', newline='\n')	
 
-	idxTrain = np.array(idxTrain, dtype = np.int)
-	idxTest = np.array(idxTest, dtype = np.int)
-	trainCov = cov[idxTrain].reshape(idxTrain.shape[0] * 15, 15)
-	testCov = cov[idxTest].reshape(idxTest.shape[0] * 15, 15)
-
-	print trainCov.shape
-	print testCov.shape
-
-	np.savetxt('covTrain_15.csv', trainCov, delimiter=',', newline='\n')
-	np.savetxt('covTest_15.csv', testCov, delimiter=',', newline='\n')	
+	np.savetxt(FILEPATH_LABELS_TRAIN,labels[idxTrain],delimiter=',',newline='\n')
+	np.savetxt(FILEPATH_LABELS_TEST,labels[idxTest],delimiter=',',newline='\n')
+	
 
 # Calculate KL Divergence between two songs given their mean vectors and covariance matrices
 def KLDivergence(muP, muQ, covP, covQ):
@@ -102,8 +133,13 @@ def knnKLD(meanTrain, covTrain, labels, meanTest, covTest, labelsTest):
 
 
 def main():
-	meanTrain, covTrain, labels, meanTest, covTest, labelsTest = readData()
-	knnKLD(meanTrain, covTrain, labels, meanTest, covTest, labelsTest)
+	# Choose the following genres: Classical, HipHop, Jazz and Rock
+	genres = np.array([1,4,5,9], dtype=np.int)
+	splitData(genres)
+
+	# Fit KNN
+	# meanTrain, covTrain, labels, meanTest, covTest, labelsTest = readData()
+	# knnKLD(meanTrain, covTrain, labels, meanTest, covTest, labelsTest)
 
 if __name__ == '__main__':
 	main()
