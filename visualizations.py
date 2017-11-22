@@ -48,6 +48,8 @@ FILEPATH_LABELS_DEV = os.path.join(FILEPATH_DATA, 'labelsDev.csv')
 
 
 def main():
+	# data = np.loadtxt(FILEPATH_MEAN, delimiter = ',')
+	# data = np.DataFrame(data, header = None)
 	data = pd.read_csv(FILEPATH_MEAN, delimiter =',', header = None)
 	print data.as_matrix().shape
 	return

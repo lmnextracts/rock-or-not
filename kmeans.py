@@ -6,6 +6,11 @@ from numpy.linalg import det, inv, norm
 from numpy.core.umath_tests import inner1d
 from sklearn.metrics import confusion_matrix
 
+import pandas as pd
+from sklearn.metrics import confusion_matrix
+from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
+
 
 # user-defined constants
 GENRES = np.array([1,4,5,9], dtype = np.int)
@@ -52,6 +57,7 @@ def splitData(genres):
 	cov = np.loadtxt(FILEPATH_COV, delimiter = ',')
 	cov = cov.reshape(DATASET_SIZE, FEATURE_DIM, FEATURE_DIM)
 	labels = np.loadtxt(FILEPATH_LABELS)
+	print labels
 
 	# Extract records relevant to genres specified in the parameter <genres>
 	indices = []
@@ -61,6 +67,7 @@ def splitData(genres):
 	indices = np.array(indices, dtype = np.int)	
 	mean = mean[indices]
 	cov = cov[indices]
+	labels = labels[indices]
 	
 	# allIndex = np.array(range(0,CURRENT_DATASET_SIZE))
 	# idxTrain = np.random.choice(CURRENT_DATASET_SIZE, TRAIN_SET, replace = False)
@@ -101,6 +108,8 @@ def splitData(genres):
 	np.savetxt(FILEPATH_COV_DEV, devCov, delimiter=',', newline='\n')
 	np.savetxt(FILEPATH_COV_TEST, testCov, delimiter=',', newline='\n')	
 
+	print labels[idxTrain]
+
 	np.savetxt(FILEPATH_LABELS_TRAIN,labels[idxTrain],delimiter=',',newline='\n')
 	np.savetxt(FILEPATH_LABELS_DEV,labels[idxDev],delimiter=',',newline='\n')
 	np.savetxt(FILEPATH_LABELS_TEST,labels[idxTest],delimiter=',',newline='\n')	
@@ -111,6 +120,8 @@ def readData():
 	covTrain = np.loadtxt(FILEPATH_COV_TRAIN, delimiter = ',')
 	# Reshape covariance matrix
 	covTrain = covTrain.reshape(TRAIN_SET, FEATURE_DIM, FEATURE_DIM)
+	labelsTrain = np.loadtxt(FILEPATH_LABELS_TRAIN)
+
 
 	# Read all training data and associated labels
 	meanDev = np.loadtxt(FILEPATH_MEAN_DEV, delimiter = ',')
@@ -126,7 +137,7 @@ def readData():
 	covTest = covDev.reshape(TEST_SET, FEATURE_DIM, FEATURE_DIM)
 	labelsTest = np.loadtxt(FILEPATH_LABELS_TEST)
 
-	return meanTrain, covTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest
+	return meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest
 
 # param <mean>: Matrix containing mean vectors for all data points in Train Set (Dim: TRAIN_SET x FEATURE_DIM)
 # param <cov>: Matrix containing covariance matrices for all data points in Train Set (Dim: TRAIN_SET x FEATURE_DIM x FEATURE_DIM)
@@ -194,22 +205,42 @@ def KLD(meanQ, covQ, meanP, covP):
 	dist = term1 + term2 + term3 - term4
 	return dist
 
+# param <data>: nd array consisting training data
+# param <labels> nd array consisting of corresponding labels
+def visualizeData(data, labels):
+	# data = pd.DataFrame(data)	
+	colors = ['red', 'blue', 'green', 'brown', 'yellow']
+	plt.figure()
+	print labels	
+
+	# labels = labels.astype(np.int)
+	# for x in xrange(0,NUM_GENRES):
+	# 	print data[labels==GENRES[x]].shape	
+	# 	# print labels==GENRES[x]
+	# 	print GENRES[x]
+	# 	# plt.scatter(data[labels==GENRES[x]][0], data[labels==GENRES[x]][1], label='Genre{}'.format(GENRES[x]), c = colors[x])
+	# plt.legend(loc='best')
+	# plt.xlabel('Feature 1')
+	# plt.ylabel('Feature 2')
+	# plt.show()
+	return
 
 def main():
 	# Choose the genres given in GENRES
-	splitData(GENRES)		
-	meanTrain, covTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
+	splitData(GENRES)	
+	meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
+	visualizeData(meanTrain, labelsTrain)
 
-	# Train for kmeans using Dev-Set
-	c_mean, c_cov = kmeans(NUM_GENRES, meanTrain, covTrain)
-	pred = fitKmeans(meanTest, covTest, c_mean, c_cov)
-	unique, counts = np.unique(pred, return_counts = True)
-	print dict(zip(unique, counts))
-	unique, counts = np.unique(labelsTest, return_counts = True)
-	print dict(zip(unique, counts))
-	plt.figure()
-	plt.scatter(pred, labelsTest)
-	plt.show()
+	# # Train for kmeans using Dev-Set
+	# c_mean, c_cov = kmeans(NUM_GENRES, meanTrain, covTrain)
+	# pred = fitKmeans(meanTest, covTest, c_mean, c_cov)
+	# unique, counts = np.unique(pred, return_counts = True)
+	# print dict(zip(unique, counts))
+	# unique, counts = np.unique(labelsTest, return_counts = True)
+	# print dict(zip(unique, counts))
+	# plt.figure()
+	# plt.scatter(pred, labelsTest)
+	# plt.show()
 
 	return
 

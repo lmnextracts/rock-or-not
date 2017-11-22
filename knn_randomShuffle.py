@@ -15,7 +15,6 @@ GENRES = np.array([1,4,5,9], dtype = np.int)
 K_START = 3
 K_END = 201
 FEATURE_DIM = 15
-ITERATIONS = 10
 
 DATASET_SIZE = 1000
 TRACK_COUNT_PER_GENRE = 100
@@ -71,7 +70,8 @@ def splitData(genres):
 	indices = np.array(indices, dtype = np.int)	
 	mean = mean[indices]
 	cov = cov[indices]
-	
+	labels = labels[indices]
+
 	# allIndex = np.array(range(0,CURRENT_DATASET_SIZE))
 	# idxTrain = np.random.choice(CURRENT_DATASET_SIZE, TRAIN_SET, replace = False)
 	# idxTest = np.setdiff1d(allIndex, idxTrain)
@@ -243,33 +243,28 @@ def main():
 	# Choose the following genres: Classical, HipHop, Jazz and Rock
 	splitData(GENRES)		
 	accuracy = np.zeros(K_END - K_START)
-	optimalK = np.zeros(ITERATIONS)
+	optimalK = 0
 
 	meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
 
-	for x in xrange(0, ITERATIONS):
-		printDecorated('Iteration {}'.format(x+1))
+	# Find optimal K by using the Dev-Set
+	for k in xrange(K_START, K_END):				
+		pred = knn(k, meanTrain, covTrain, labelsTrain, meanDev, covDev)
+		accuracy[k-3] = np.where(pred == labelsDev)[0].shape[0] * 1. / len(meanDev)
+		# pred = knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest)
+		# accuracy[k-3] = np.where(pred == labelsTest)[0].shape[0] * 1. / len(meanTest)
+		print 'k={}\tAccuracy: {}'.format(k,accuracy[k-3])
 
-		# Find optimal K by using the Dev-Set
-		for k in xrange(K_START, K_END):				
-			pred = knn(k, meanTrain, covTrain, labelsTrain, meanDev, covDev)
-			accuracy[k-3] = np.where(pred == labelsDev)[0].shape[0] * 1. / len(meanDev)
-			# pred = knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest)
-			# accuracy[k-3] = np.where(pred == labelsTest)[0].shape[0] * 1. / len(meanTest)
-			print 'k={}\tAccuracy: {}'.format(k,accuracy[k-3])
+	optimalK = int(np.argmax(accuracy) + 3)
+	print '\n k-optimal: {} with accuracy = {}'.format(optimalK, accuracy[optimalK])
 
-		optimalK[x] = int(np.argmax(accuracy) + 3)
-		print '\n k-optimal: {} with accuracy = {}'.format(optimalK[x], accuracy[int(optimalK[x]-3)])
-
-		# # Plot k-Value vs Accuracy
-		plt.figure()
-		plt.plot(range(K_START,K_END), accuracy)	
-		plt.xlabel('K Value')
-		plt.ylabel('Accuracy')
-		plt.title('Accuracy vs K Value for Dev-Set')
-		plt.savefig(os.path.join(FILEPATH_PLOTS, 'kVsAccuracy{}.png'.format(x+1)))		
-
-	kValueForTest = int(np.mean(optimalK))
+	# # Plot k-Value vs Accuracy
+	plt.figure()
+	plt.plot(range(K_START,K_END), accuracy)	
+	plt.xlabel('K Value')
+	plt.ylabel('Accuracy')
+	plt.title('Accuracy vs K Value for Dev-Set')
+	plt.savefig(os.path.join(FILEPATH_PLOTS, 'kVsAccuracy.png'))		
 	
 	# Comment out the part above and run with kValueForTest replaced by optimal K obtained from above.
 	# Predict labels for test set using k-optimal 
