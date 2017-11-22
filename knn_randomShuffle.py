@@ -167,7 +167,7 @@ def readData():
 	meanTest = np.loadtxt(FILEPATH_MEAN_TEST, delimiter = ',')
 	covTest = np.loadtxt(FILEPATH_COV_TEST, delimiter = ',')
 	# Reshape covariance matrix
-	covTest = covDev.reshape(TEST_SET, FEATURE_DIM, FEATURE_DIM)
+	covTest = covTest.reshape(TEST_SET, FEATURE_DIM, FEATURE_DIM)
 	labelsTest = np.loadtxt(FILEPATH_LABELS_TEST)
 
 	return meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest
@@ -215,30 +215,6 @@ def knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest):
 	return pred
 
 def main():
-
-	# # Training with Dev for Vectorized KNN
-	# accuracy = np.zeros(K_END - K_START)
-
-	# Choose the following genres: Classical, HipHop, Jazz and Rock
-	# splitData(GENRES)		
-	# meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
-
-	# # Find optimal K by using the Dev-Set
-	# for k in xrange(K_START, K_END):				
-	# 	pred = knn(k, meanTrain, covTrain, labelsTrain, meanDev, covDev)
-	# 	accuracy[k-3] = np.where(pred == labelsDev)[0].shape[0] * 1. / len(meanDev)
-	# 	print 'k={}\tAccuracy: {}'.format(k,accuracy[k-3])
-
-	# optimalK = int(np.argmax(accuracy) + 3)
-	# print '\n k-optimal: {} with accuracy = {}'.format(optimalK, accuracy[optimalK])
-
-	# # # Plot k-Value vs Accuracy
-	# plt.figure()
-	# plt.plot(range(K_START,K_END), accuracy)	
-	# plt.xlabel('K Value')
-	# plt.ylabel('Accuracy')
-	# plt.title('Accuracy vs K Value for Dev-Set')
-	# plt.savefig(os.path.join(FILEPATH_PLOTS, 'kValueVsAccuracyFinal.png'))
 
 	# Choose the following genres: Classical, HipHop, Jazz and Rock
 	splitData(GENRES)		

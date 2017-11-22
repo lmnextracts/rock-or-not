@@ -8,12 +8,12 @@ from sklearn.metrics import confusion_matrix
 
 import pandas as pd
 from sklearn.metrics import confusion_matrix
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA as sklearnPCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
 
 # user-defined constants
-GENRES = np.array([1,4,5,9], dtype = np.int)
+GENRES = np.array([1,4], dtype = np.int)
 NUM_GENRES = len(GENRES)
 K_START = 3
 K_END = 201
@@ -24,15 +24,13 @@ DATASET_SIZE = 1000
 TRACK_COUNT_PER_GENRE = 100
 CURRENT_DATASET_SIZE = NUM_GENRES * TRACK_COUNT_PER_GENRE
 TRAINSET_PERCENT = 0.7
-DEVSET_PERCENT = 0.15
-TESTSET_PERCENT = 0.15
+TESTSET_PERCENT = 0.3
 
-DEV_SET = int(DEVSET_PERCENT * CURRENT_DATASET_SIZE)
 TRAIN_SET = int(TRAINSET_PERCENT * CURRENT_DATASET_SIZE)
 TEST_SET = int(TESTSET_PERCENT * CURRENT_DATASET_SIZE)
 
-FILEPATH_DATA = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\data'
-FILEPATH_PLOTS = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\plots'
+FILEPATH_DATA = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\data\\kmeans'
+FILEPATH_PLOTS = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\plots\\kmeans'
 
 
 FILEPATH_MEAN = os.path.join(FILEPATH_DATA,'mean_{}.csv'.format(FEATURE_DIM))
@@ -41,13 +39,10 @@ FILEPATH_LABELS = os.path.join(FILEPATH_DATA, 'labels.csv')
 
 FILEPATH_MEAN_TRAIN = os.path.join(FILEPATH_DATA, 'meanTrain_{}.csv'.format(FEATURE_DIM))
 FILEPATH_COV_TRAIN = os.path.join(FILEPATH_DATA, 'covTrain_{}.csv'.format(FEATURE_DIM))
-FILEPATH_MEAN_DEV = os.path.join(FILEPATH_DATA, 'meanDev_{}.csv'.format(FEATURE_DIM))
-FILEPATH_COV_DEV = os.path.join(FILEPATH_DATA, 'covDev_{}.csv'.format(FEATURE_DIM))
 FILEPATH_MEAN_TEST = os.path.join(FILEPATH_DATA, 'meanTest_{}.csv'.format(FEATURE_DIM))
 FILEPATH_COV_TEST = os.path.join(FILEPATH_DATA, 'covTest_{}.csv'.format(FEATURE_DIM))
 FILEPATH_LABELS_TRAIN = os.path.join(FILEPATH_DATA, 'labelsTrain.csv')
 FILEPATH_LABELS_TEST = os.path.join(FILEPATH_DATA, 'labelsTest.csv')
-FILEPATH_LABELS_DEV = os.path.join(FILEPATH_DATA, 'labelsDev.csv')
 
 # Splits data into training set, dev set and test set.
 # Param <genres>: Array specifying the genres to consider
@@ -57,7 +52,6 @@ def splitData(genres):
 	cov = np.loadtxt(FILEPATH_COV, delimiter = ',')
 	cov = cov.reshape(DATASET_SIZE, FEATURE_DIM, FEATURE_DIM)
 	labels = np.loadtxt(FILEPATH_LABELS)
-	print labels
 
 	# Extract records relevant to genres specified in the parameter <genres>
 	indices = []
@@ -84,34 +78,25 @@ def splitData(genres):
 	for x, g in enumerate(genres):
 		a = range(x * TRACK_COUNT_PER_GENRE, x * TRACK_COUNT_PER_GENRE + int(TRAINSET_PERCENT * TRACK_COUNT_PER_GENRE))
 		idxTrain = np.append(idxTrain,a)
-		b = range(x * TRACK_COUNT_PER_GENRE + int(TRAINSET_PERCENT * TRACK_COUNT_PER_GENRE), x * TRACK_COUNT_PER_GENRE + int((TRAINSET_PERCENT + DEVSET_PERCENT) * TRACK_COUNT_PER_GENRE))
-		idxDev = np.append(idxDev,b)
-		c = range(x * TRACK_COUNT_PER_GENRE + int( (TRAINSET_PERCENT + DEVSET_PERCENT) * TRACK_COUNT_PER_GENRE), (x+1) * TRACK_COUNT_PER_GENRE)
+		c = range(x * TRACK_COUNT_PER_GENRE + int(TRAINSET_PERCENT * TRACK_COUNT_PER_GENRE), (x+1) * TRACK_COUNT_PER_GENRE)
 		idxTest = np.append(idxTest,c)
 
 	# Extract train and test records and save as CSV
 	idxTrain = np.array(idxTrain, dtype = np.int)
-	idxDev = np.array(idxDev, dtype = np.int)
 	idxTest = np.array(idxTest, dtype = np.int)
 
 	# Reshape
 	trainCov = cov[idxTrain].reshape(idxTrain.shape[0] * FEATURE_DIM, FEATURE_DIM)
-	devCov = cov[idxDev].reshape(idxDev.shape[0] * FEATURE_DIM, FEATURE_DIM)
 	testCov = cov[idxTest].reshape(idxTest.shape[0] * FEATURE_DIM, FEATURE_DIM)
 
 	# Save split data as CSV files
 	np.savetxt(FILEPATH_MEAN_TRAIN,mean[idxTrain],delimiter=',',newline='\n')
-	np.savetxt(FILEPATH_MEAN_DEV,mean[idxDev],delimiter=',',newline='\n')
 	np.savetxt(FILEPATH_MEAN_TEST,mean[idxTest],delimiter=',',newline='\n')
 	
 	np.savetxt(FILEPATH_COV_TRAIN, trainCov, delimiter=',', newline='\n')
-	np.savetxt(FILEPATH_COV_DEV, devCov, delimiter=',', newline='\n')
 	np.savetxt(FILEPATH_COV_TEST, testCov, delimiter=',', newline='\n')	
 
-	print labels[idxTrain]
-
 	np.savetxt(FILEPATH_LABELS_TRAIN,labels[idxTrain],delimiter=',',newline='\n')
-	np.savetxt(FILEPATH_LABELS_DEV,labels[idxDev],delimiter=',',newline='\n')
 	np.savetxt(FILEPATH_LABELS_TEST,labels[idxTest],delimiter=',',newline='\n')	
 
 def readData():
@@ -122,22 +107,14 @@ def readData():
 	covTrain = covTrain.reshape(TRAIN_SET, FEATURE_DIM, FEATURE_DIM)
 	labelsTrain = np.loadtxt(FILEPATH_LABELS_TRAIN)
 
-
-	# Read all training data and associated labels
-	meanDev = np.loadtxt(FILEPATH_MEAN_DEV, delimiter = ',')
-	covDev = np.loadtxt(FILEPATH_COV_DEV, delimiter = ',')
-	# Reshape covariance matrix
-	covDev = covDev.reshape(DEV_SET, FEATURE_DIM, FEATURE_DIM)
-	labelsDev = np.loadtxt(FILEPATH_LABELS_DEV)
-
 	# Read all training data and associated labels
 	meanTest = np.loadtxt(FILEPATH_MEAN_TEST, delimiter = ',')
 	covTest = np.loadtxt(FILEPATH_COV_TEST, delimiter = ',')
 	# Reshape covariance matrix
-	covTest = covDev.reshape(TEST_SET, FEATURE_DIM, FEATURE_DIM)
+	covTest = covTest.reshape(TEST_SET, FEATURE_DIM, FEATURE_DIM)
 	labelsTest = np.loadtxt(FILEPATH_LABELS_TEST)
 
-	return meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest
+	return meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest
 
 # param <mean>: Matrix containing mean vectors for all data points in Train Set (Dim: TRAIN_SET x FEATURE_DIM)
 # param <cov>: Matrix containing covariance matrices for all data points in Train Set (Dim: TRAIN_SET x FEATURE_DIM x FEATURE_DIM)
@@ -207,41 +184,44 @@ def KLD(meanQ, covQ, meanP, covP):
 
 # param <data>: nd array consisting training data
 # param <labels> nd array consisting of corresponding labels
-def visualizeData(data, labels):
-	# data = pd.DataFrame(data)	
+# param <title> Title for the 2D plot of PCA
+# This method rojects given data set onto 2D space using PCA
+def visualizeData(data, labels, title):
+	X = pd.DataFrame(data)	
+	X_norm = (X - X.min()) / (X.max() - X.min())
+	pca = sklearnPCA(n_components=2)
+	transformed = pd.DataFrame(pca.fit_transform(X_norm))
+
 	colors = ['red', 'blue', 'green', 'brown', 'yellow']
 	plt.figure()
-	print labels	
 
-	# labels = labels.astype(np.int)
-	# for x in xrange(0,NUM_GENRES):
-	# 	print data[labels==GENRES[x]].shape	
-	# 	# print labels==GENRES[x]
-	# 	print GENRES[x]
-	# 	# plt.scatter(data[labels==GENRES[x]][0], data[labels==GENRES[x]][1], label='Genre{}'.format(GENRES[x]), c = colors[x])
-	# plt.legend(loc='best')
-	# plt.xlabel('Feature 1')
-	# plt.ylabel('Feature 2')
-	# plt.show()
+	labels = labels.astype(np.int)
+	for x in xrange(0,NUM_GENRES):
+		# plt.scatter(data[labels==GENRES[x]][0], data[labels==GENRES[x]][5], label='Genre{}'.format(GENRES[x]), c = colors[x])
+		# Check if plot if for train/test data or fit data
+		if('Clustered' in title):
+			plt.scatter(X_norm[labels==x][0], X_norm[labels==x][1], label='Cluster{}'.format(x+1), c = colors[x])
+		else:
+			plt.scatter(X_norm[labels==GENRES[x]][0], X_norm[labels==GENRES[x]][1], label='Genre{}'.format(GENRES[x]), c = colors[x])			
+	plt.legend(loc='best')
+	plt.xlabel('Component 1')
+	plt.ylabel('Component 2')
+	plt.title(title)
+	plt.savefig(os.path.join(FILEPATH_PLOTS, title + '_rockHH.png'))
+	plt.show()
 	return
 
 def main():
 	# Choose the genres given in GENRES
 	splitData(GENRES)	
-	meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
-	visualizeData(meanTrain, labelsTrain)
+	meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest = readData()
+	visualizeData(meanTrain, labelsTrain, '2D Plot for Training Data using PCA')
+	visualizeData(meanTest, labelsTest, '2D Plot for Test Data using PCA')
 
-	# # Train for kmeans using Dev-Set
-	# c_mean, c_cov = kmeans(NUM_GENRES, meanTrain, covTrain)
-	# pred = fitKmeans(meanTest, covTest, c_mean, c_cov)
-	# unique, counts = np.unique(pred, return_counts = True)
-	# print dict(zip(unique, counts))
-	# unique, counts = np.unique(labelsTest, return_counts = True)
-	# print dict(zip(unique, counts))
-	# plt.figure()
-	# plt.scatter(pred, labelsTest)
-	# plt.show()
-
+	# Train for kmeans using Dev-Set	
+	c_mean, c_cov = kmeans(NUM_GENRES, meanTrain, covTrain)
+	pred = fitKmeans(meanTest, covTest, c_mean, c_cov)
+	visualizeData(meanTest, pred, '2D Plot for Clustered Data')
 	return
 
 if __name__ == '__main__':
