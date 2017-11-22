@@ -97,10 +97,12 @@ def splitData(genres):
 	idxDev = np.array(idxDev, dtype = np.int)
 	idxTest = np.array(idxTest, dtype = np.int)
 
+	# Reshape
 	trainCov = cov[idxTrain].reshape(idxTrain.shape[0] * FEATURE_DIM, FEATURE_DIM)
 	devCov = cov[idxDev].reshape(idxDev.shape[0] * FEATURE_DIM, FEATURE_DIM)
 	testCov = cov[idxTest].reshape(idxTest.shape[0] * FEATURE_DIM, FEATURE_DIM)
 
+	# Save split data as CSV files
 	np.savetxt(FILEPATH_MEAN_TRAIN,mean[idxTrain],delimiter=',',newline='\n')
 	np.savetxt(FILEPATH_MEAN_DEV,mean[idxDev],delimiter=',',newline='\n')
 	np.savetxt(FILEPATH_MEAN_TEST,mean[idxTest],delimiter=',',newline='\n')
@@ -119,13 +121,8 @@ def splitData(genres):
 # param <meanTest>: TEST_SET X FEATURE_DIM
 # param <covTrain>: TEST_SET X FEATURE_DIM X FEATURE_DIM
 def KLD(meanTrain, covTrain, meanTest, covTest):
-	# Term1: log(det(covQ)/det(covP))
-	# Term4: TEST_SET X TRAIN_SET with values FEATURE_DIM
-
 	testSet = len(meanTest)
 	trainSet = TRAIN_SET
-
-	print covTest.shape
 	covP = det(covTest).reshape(testSet, 1)
 	covQ = det(covTrain).reshape(1, trainSet)
 	term1 = np.log(covQ / covP)
@@ -175,54 +172,37 @@ def readData():
 
 	return meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest
 
-def knnKLD(meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest, trial):
+def knnKLD(k, meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest):
 	testSet = len(meanTest)
 	trainSet = len(meanTrain)
 
 	dist = np.zeros((testSet, trainSet))
 	pred = np.zeros(testSet)
 	labelsDev = labelsTest[0:testSet].astype(int)
+	accuracy = 0
 
-	accuracy = np.zeros(18)
+	for x in xrange(0,testSet):
+		print 'Classifying record {}'.format(x)
+
+		#  Find distance of data point with every song in the training set
+		for y in xrange(0,trainSet):
+			dist[x,y] = KLDivergence(meanTest[x], meanTrain[y], covTest[x], covTrain[y])		
+
+
+	# # Find the k nearest songs
+	# knearest = np.argsort(dist[x])[0:k]
+	# knearest = labelsTrain[knearest].astype(int)
+
+	# # Classify song with the maximum label count
+	# counts = np.bincount(knearest)
+	# pred[x] = np.argmax(counts)
+	# pred = pred.astype(int)
+	# # Calculate accuracy
+	# accuracy = np.where(labelsDev == pred)[0].shape[0] * 1. / testSet
+
+	print 'Accuracy: {}, \tFor K={}'.format(accuracy, k)
 	
-	for K_VALUE in xrange(3,21):
-		print 'Classifying for K={}'.format(K_VALUE)
-		for x in xrange(0,testSet):
-			#  Find distance of data point with every song in the training set
-			for y in xrange(0,trainSet):
-				dist[x,y] = KLDivergence(meanTest[x], meanTrain[y], covTest[x], covTrain[y])		
-
-			# Find the k nearest songs
-			knearest = np.argsort(dist[x])[0:K_VALUE]
-			knearest = labelsTrain[knearest].astype(int)
-			# Classify song with the maximum label count
-			counts = np.bincount(knearest)
-			pred[x] = np.argmax(counts)
-			# print 'Classifying record {} as Genre[{}]'.format(x+1, pred[x])
-
-			pred = pred.astype(int)
-			# Calculate accuracy
-			accuracy[K_VALUE-3] = np.where(labelsDev == pred)[0].shape[0] * 1. / testSet
-		print 'Accuracy for K={}: {}'.format(K_VALUE, accuracy[K_VALUE-3])		
-
-	print 'Best Accuracy: {}, \tFor K={}'.format(np.max(accuracy),np.argmax(accuracy)+3)
-	# Plot and save Accuracy-vs-K-Value
-	plt.plot(range(3,21),accuracy)
-	plt.xlabel('K Value')
-	plt.ylabel('Accuracy')
-	plt.title('Accuracy vs K Value for Dev-Set')
-	plt.savefig(os.path.join(FILEPATH_PLOTS, 'knn_acc_{}.png'.format(trial)))
-
-
-	# Plot and save Error-vs-K-Value
-	# error = np.ones(18) - accuracy
-	# plt.plot(range(3,21), error)
-	# plt.xlabel('K Value')
-	# plt.ylabel('Error in Prediction')
-	# plt.title('Accuracy vs K Value for Dev-Set')
-	# plt.savefig(os.path.join(FILEPATH_PLOTS, 'knn_error_{}.png'.format(TRIAL_NO)))
-
-	return np.max(accuracy), np.argmax(accuracy)+3
+	return pred
 
 def knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest):
 	dist = KLD(meanTrain, covTrain, meanTest, covTest)
@@ -235,60 +215,22 @@ def knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest):
 	return pred
 
 def main():
-	# # Fit using slow KNN
-	# accuracy = np.zeros((10,2))
 
-	# for x in xrange(0,10):
-	# 	# Choose the following genres: Classical, HipHop, Jazz and Rock
-	# 	genres = np.array([1,4,5,9], dtype=np.int)
-	# 	splitData(genres)		
-
-	# 	meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()		
-	# 	accuracy[x] = knnKLD(meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, x)
-
-	# np.savetxt(os.path.join(FILEPATH_PLOTS, 'acc.csv'), accuracy, delimiter=',')
-
-
-	# Training with Dev for Vectorized KNN
-	accuracy = np.zeros(K_END - K_START)
-
-	# Choose the following genres: Classical, HipHop, Jazz and Rock
-	splitData(GENRES)		
-	meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
-
-	# Find optimal K by using the Dev-Set
-	for k in xrange(K_START, K_END):				
-		pred = knn(k, meanTrain, covTrain, labelsTrain, meanDev, covDev)
-		accuracy[k-3] = np.where(pred == labelsDev)[0].shape[0] * 1. / len(meanDev)
-		print 'k={}\tAccuracy: {}'.format(k,accuracy[k-3])
-
-	optimalK = int(np.argmax(accuracy) + 3)
-	print '\n k-optimal: {} with accuracy = {}'.format(optimalK, accuracy[optimalK])
-
-	# # Plot k-Value vs Accuracy
-	plt.figure()
-	plt.plot(range(K_START,K_END), accuracy)	
-	plt.xlabel('K Value')
-	plt.ylabel('Accuracy')
-	plt.title('Accuracy vs K Value for Dev-Set')
-	plt.savefig(os.path.join(FILEPATH_PLOTS, 'kValueVsAccuracyFinal.png'))
-
-	# # Choose the following genres: Classical, HipHop, Jazz and Rock
-	# splitData(GENRES)		
+	# # Training with Dev for Vectorized KNN
 	# accuracy = np.zeros(K_END - K_START)
 
+	# Choose the following genres: Classical, HipHop, Jazz and Rock
+	# splitData(GENRES)		
 	# meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
 
 	# # Find optimal K by using the Dev-Set
 	# for k in xrange(K_START, K_END):				
 	# 	pred = knn(k, meanTrain, covTrain, labelsTrain, meanDev, covDev)
 	# 	accuracy[k-3] = np.where(pred == labelsDev)[0].shape[0] * 1. / len(meanDev)
-	# 	# pred = knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest)
-	# 	# accuracy[k-3] = np.where(pred == labelsTest)[0].shape[0] * 1. / len(meanTest)
 	# 	print 'k={}\tAccuracy: {}'.format(k,accuracy[k-3])
 
-	# optimalK[x] = int(np.argmax(accuracy) + 3)
-	# print '\n k-optimal: {} with accuracy = {}'.format(optimalK[x], accuracy[int(optimalK[x]-3)])
+	# optimalK = int(np.argmax(accuracy) + 3)
+	# print '\n k-optimal: {} with accuracy = {}'.format(optimalK, accuracy[optimalK])
 
 	# # # Plot k-Value vs Accuracy
 	# plt.figure()
@@ -296,16 +238,43 @@ def main():
 	# plt.xlabel('K Value')
 	# plt.ylabel('Accuracy')
 	# plt.title('Accuracy vs K Value for Dev-Set')
-	# plt.savefig(os.path.join(FILEPATH_PLOTS, 'kVsAccuracy{}.png'.format(x+1)))		
+	# plt.savefig(os.path.join(FILEPATH_PLOTS, 'kValueVsAccuracyFinal.png'))
 
-	# print optimalK
-	# print mode(optimalK)[0]
+	# Choose the following genres: Classical, HipHop, Jazz and Rock
+	splitData(GENRES)		
+	accuracy = np.zeros(K_END - K_START)
+	optimalK = np.zeros(ITERATIONS)
 
-	# kValueForTest = int(np.mean(optimalK))
+	meanTrain, covTrain, labelsTrain, meanDev, covDev, labelsDev, meanTest, covTest, labelsTest = readData()
+
+	for x in xrange(0, ITERATIONS):
+		printDecorated('Iteration {}'.format(x+1))
+
+		# Find optimal K by using the Dev-Set
+		for k in xrange(K_START, K_END):				
+			pred = knn(k, meanTrain, covTrain, labelsTrain, meanDev, covDev)
+			accuracy[k-3] = np.where(pred == labelsDev)[0].shape[0] * 1. / len(meanDev)
+			# pred = knn(k, meanTrain, covTrain, labelsTrain, meanTest, covTest)
+			# accuracy[k-3] = np.where(pred == labelsTest)[0].shape[0] * 1. / len(meanTest)
+			print 'k={}\tAccuracy: {}'.format(k,accuracy[k-3])
+
+		optimalK[x] = int(np.argmax(accuracy) + 3)
+		print '\n k-optimal: {} with accuracy = {}'.format(optimalK[x], accuracy[int(optimalK[x]-3)])
+
+		# # Plot k-Value vs Accuracy
+		plt.figure()
+		plt.plot(range(K_START,K_END), accuracy)	
+		plt.xlabel('K Value')
+		plt.ylabel('Accuracy')
+		plt.title('Accuracy vs K Value for Dev-Set')
+		plt.savefig(os.path.join(FILEPATH_PLOTS, 'kVsAccuracy{}.png'.format(x+1)))		
+
+	kValueForTest = int(np.mean(optimalK))
 	
 	# Comment out the part above and run with kValueForTest replaced by optimal K obtained from above.
 	# Predict labels for test set using k-optimal 
 	pred = knn(optimalK, meanTrain, covTrain, labelsTrain, meanTest, covTest)
+	# pred = knnKLD(kValueForTest, meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest)
 	accuracyTest = np.where(pred == labelsTest)[0].shape[0] * 1. / len(meanTest)
 	print 'Accuracy: {}'.format(accuracyTest)
 	print 'Confusion Matrix'
