@@ -11,7 +11,6 @@ from sklearn.metrics import confusion_matrix
 from sklearn.decomposition import PCA as sklearnPCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
-
 # user-defined constants
 GENRES = np.array([1,4], dtype = np.int)
 NUM_GENRES = len(GENRES)
@@ -44,6 +43,20 @@ FILEPATH_COV_TEST = os.path.join(FILEPATH_DATA, 'covTest_{}.csv'.format(FEATURE_
 FILEPATH_LABELS_TRAIN = os.path.join(FILEPATH_DATA, 'labelsTrain.csv')
 FILEPATH_LABELS_TEST = os.path.join(FILEPATH_DATA, 'labelsTest.csv')
 
+def getGenre(label):
+	return {
+	0:'blues',
+	1:'classical',
+	2:'country',
+	3:'disco',
+	4:'hiphop',
+	5:'jazz',
+	6:'metal',
+	7:'pop',
+	8:'reggae',
+	9:'rock',
+	}.get(label, 'Unknown')
+
 # Splits data into training set, dev set and test set.
 # Param <genres>: Array specifying the genres to consider
 def splitData(genres):
@@ -62,10 +75,6 @@ def splitData(genres):
 	mean = mean[indices]
 	cov = cov[indices]
 	labels = labels[indices]
-	
-	# allIndex = np.array(range(0,CURRENT_DATASET_SIZE))
-	# idxTrain = np.random.choice(CURRENT_DATASET_SIZE, TRAIN_SET, replace = False)
-	# idxTest = np.setdiff1d(allIndex, idxTrain)
 
 	idxTrain = []
 	idxDev = []
@@ -202,12 +211,12 @@ def visualizeData(data, labels, title):
 		if('Clustered' in title):
 			plt.scatter(X_norm[labels==x][0], X_norm[labels==x][1], label='Cluster{}'.format(x+1), c = colors[x])
 		else:
-			plt.scatter(X_norm[labels==GENRES[x]][0], X_norm[labels==GENRES[x]][1], label='Genre{}'.format(GENRES[x]), c = colors[x])			
+			plt.scatter(X_norm[labels==GENRES[x]][0], X_norm[labels==GENRES[x]][1], label= getGenre(GENRES[x]), c = colors[x])			
 	plt.legend(loc='best')
 	plt.xlabel('Component 1')
 	plt.ylabel('Component 2')
 	plt.title(title)
-	plt.savefig(os.path.join(FILEPATH_PLOTS, title + '_rockHH.png'))
+	plt.savefig(os.path.join(FILEPATH_PLOTS, title + '_CHH.png'))
 	plt.show()
 	return
 
