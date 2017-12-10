@@ -12,7 +12,7 @@ from sklearn.decomposition import PCA as sklearnPCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
 # user-defined constants
-GENRES = np.array([1,4], dtype = np.int)
+GENRES = np.array([1,4,5,7], dtype = np.int)
 NUM_GENRES = len(GENRES)
 K_START = 3
 K_END = 201
@@ -28,8 +28,8 @@ TESTSET_PERCENT = 0.3
 TRAIN_SET = int(TRAINSET_PERCENT * CURRENT_DATASET_SIZE)
 TEST_SET = int(TESTSET_PERCENT * CURRENT_DATASET_SIZE)
 
-FILEPATH_DATA = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\data\\kmeans'
-FILEPATH_PLOTS = 'C:\\Users\\Lakshmi\Desktop\\repo229\\rock-or-not\\plots\\kmeans'
+FILEPATH_DATA = 'D:\\repo\\rock-or-not\\data\\kmeans'
+FILEPATH_PLOTS = 'D:\\repo\\rock-or-not\\plots\\kmeans'
 
 
 FILEPATH_MEAN = os.path.join(FILEPATH_DATA,'mean_{}.csv'.format(FEATURE_DIM))
@@ -223,14 +223,14 @@ def visualizeData(data, labels, title):
 def main():
 	# Choose the genres given in GENRES
 	splitData(GENRES)	
-	meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest = readData()
-	visualizeData(meanTrain, labelsTrain, '2D Plot for Training Data using PCA')
-	visualizeData(meanTest, labelsTest, '2D Plot for Test Data using PCA')
+	# meanTrain, covTrain, labelsTrain, meanTest, covTest, labelsTest = readData()
+	# visualizeData(meanTrain, labelsTrain, '2D Plot for Training Data using PCA')
+	# visualizeData(meanTest, labelsTest, '2D Plot for Test Data using PCA')
 
-	# Train for kmeans using Dev-Set	
-	c_mean, c_cov = kmeans(NUM_GENRES, meanTrain, covTrain)
-	pred = fitKmeans(meanTest, covTest, c_mean, c_cov)
-	visualizeData(meanTest, pred, '2D Plot for Clustered Data')
+	# # Train for kmeans using Dev-Set	
+	# c_mean, c_cov = kmeans(NUM_GENRES, meanTrain, covTrain)
+	# pred = fitKmeans(meanTest, covTest, c_mean, c_cov)
+	# visualizeData(meanTest, pred, '2D Plot for Clustered Data')
 	return
 
 if __name__ == '__main__':
